@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 from enum import Enum
+from typing import Literal
+
 import numpy as np
 
 
@@ -44,10 +46,10 @@ class CollisionType(Enum):
 
 @dataclass
 class ControllableAcceleration:
-    right: bool = False
-    left: bool = False
-    up: bool = False
-    down: bool = False
+    right: Literal[0] | Literal[1] = 0
+    left: Literal[0] | Literal[1] = 0
+    up: Literal[0] | Literal[1] = 0
+    down: Literal[0] | Literal[1] = 0
 
 
 def calculate_new_normal_velocity(first_mass, second_mass, first_velocity, second_velocity, elasticity):
@@ -79,6 +81,8 @@ class Simulation:
         if 1 < elasticity_coefficient < 0:
             raise ValueError("Elasticity coefficient must be in [0, 1]")
         self.elasticity_coefficient: float = elasticity_coefficient
+        if any(obj.movement_type == MovementType.CONTROLLABLE for obj in self.space_objects):
+            self.controllable_acceleration: ControllableAcceleration = ControllableAcceleration()
 
     def calculate_collisions(self) -> None:
         collisions = []
@@ -125,8 +129,8 @@ class Simulation:
         if self.space_objects[i].movement_type == MovementType.STATIC:
             return np.zeros(2)
         return self.acceleration_rate * np.array(
-            [ControllableAcceleration.right - ControllableAcceleration.left,
-             ControllableAcceleration.up - ControllableAcceleration.down]) + sum(
+            [self.controllable_acceleration.right - self.controllable_acceleration.left,
+             self.controllable_acceleration.up - self.controllable_acceleration.down]) + sum(
             self.G * self.space_objects[j].mass / np.linalg.norm(
                 self.space_objects[j].position - self.space_objects[i].position) ** 1.5 * (
                     self.space_objects[j].position -

@@ -7,9 +7,9 @@
 </head>
 <body>
 <h1>Test</h1>
+<button id="test"></button>
 <script>
     const socket = io();
-    console.log(socket.id)
     socket.on('update_step', (response) => {
         console.log(response)
     });

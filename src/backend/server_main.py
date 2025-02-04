@@ -19,14 +19,10 @@ simulations_dict: dict[str, Simulation] = {}
 threads_dict: dict[str, Thread] = {}
 
 
-def simulate(user_id: str):
-    simulation = simulations_dict[user_id]
-    for _ in range(int(simulation.simulation_time // simulation.time_delta)):
-        simulation.calculate_step()
-        response: json = json.dumps(
-            [{i: {"x": obj.position[0], "y": obj.position[1]}} for i, obj in enumerate(simulation.space_objects)])
-        socketio.emit('update_step', response, room=user_id)
-        socketio.sleep(0.016)
+@app.route("/")
+def index():
+    return render_template("index.html")
+
 
 @socketio.on('disconnect')
 def handle_disconnect():
@@ -36,11 +32,6 @@ def handle_disconnect():
     if user_id in threads_dict.keys():
         threads_dict[user_id].join()
         del threads_dict[user_id]
-
-
-@app.route("/")
-def index():
-    return render_template("index.html")
 
 
 @app.route("/set_simulation", methods=["POST"])
@@ -71,11 +62,44 @@ def set_simulation():
         return jsonify({'status': 'error', 'message': str(e)}), 400
 
 
+@socketio.on('button_press')
+def handle_button_press(data):
+    user_id = request.sid
+    if user_id in simulations_dict.keys():
+        match data['direction']:
+            case 'right':
+                simulations_dict[user_id].controllable_acceleration.right = data['is_pressed']
+            case 'left':
+                simulations_dict[user_id].controllable_acceleration.left = data['is_pressed']
+            case 'up':
+                simulations_dict[user_id].controllable_acceleration.up = data['is_pressed']
+            case 'down':
+                simulations_dict[user_id].controllable_acceleration.down = data['is_pressed']
+            case _:
+                raise ValueError("Invalid direction")
+
+
+def simulate(user_id: str):
+    simulation = simulations_dict[user_id]
+    for _ in range(int(simulation.simulation_time // simulation.time_delta)):
+        simulation.calculate_step()
+        response: json = json.dumps(
+            [{i: {"x": obj.position[0], "y": obj.position[1]}} for i, obj in enumerate(simulation.space_objects)])
+        socketio.emit('update_step', response, room=user_id)
+        socketio.sleep(0.016)
+
+
 @app.route('/launch_simulation', methods=['POST'])
 def launch_simulation():
     user_thread = Thread(target=simulate, args=(request.json['user_id'],))
     user_thread.start()
     return jsonify({'status': 'started'})
+
+
+@app.route('/test', methods=['POST'])
+def test():
+    socketio.emit('button_press', {"is_pressed": 1, "direction": "right"})
+    return jsonify({'status': 'success'}), 200
 
 
 if __name__ == "__main__":
