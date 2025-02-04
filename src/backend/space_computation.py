@@ -128,14 +128,17 @@ class Simulation:
     def calculate_acceleration(self, i: int) -> np.array:
         if self.space_objects[i].movement_type == MovementType.STATIC:
             return np.zeros(2)
-        return self.acceleration_rate * np.array(
-            [self.controllable_acceleration.right - self.controllable_acceleration.left,
-             self.controllable_acceleration.up - self.controllable_acceleration.down]) + sum(
+        acceleration = sum(
             self.G * self.space_objects[j].mass / np.linalg.norm(
                 self.space_objects[j].position - self.space_objects[i].position) ** 1.5 * (
                     self.space_objects[j].position -
                     self.space_objects[i].position)
             for j in range(len(self.space_objects)) if j != i)
+        if self.space_objects[i].movement_type == MovementType.CONTROLLABLE:
+            acceleration += self.acceleration_rate * np.array(
+                [self.controllable_acceleration.right - self.controllable_acceleration.left,
+                 self.controllable_acceleration.up - self.controllable_acceleration.down])
+        return acceleration
 
     def calculate_step(self) -> None:
         if self.collision_type == CollisionType.ELASTIC:

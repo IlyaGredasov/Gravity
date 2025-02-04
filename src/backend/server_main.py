@@ -5,14 +5,16 @@ import numpy as np
 from dotenv import load_dotenv
 from flask import Flask, render_template, jsonify, request
 from flask_socketio import SocketIO
+from flask_cors import CORS
 from threading import Thread
 
 from space_computation import Simulation, SpaceObject, CollisionType, MovementType
 
 app = Flask(__name__)
+CORS(app)
 load_dotenv('.env')
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
-socketio = SocketIO(app, async_mode="threading")
+socketio = SocketIO(app, async_mode="threading", cors_allowed_origins="*")
 
 users_dict: dict[str, str] = {}
 simulations_dict: dict[str, Simulation] = {}
@@ -94,12 +96,6 @@ def launch_simulation():
     user_thread = Thread(target=simulate, args=(request.json['user_id'],))
     user_thread.start()
     return jsonify({'status': 'started'})
-
-
-@app.route('/test', methods=['POST'])
-def test():
-    socketio.emit('button_press', {"is_pressed": 1, "direction": "right"})
-    return jsonify({'status': 'success'}), 200
 
 
 if __name__ == "__main__":
