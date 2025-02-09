@@ -21,11 +21,6 @@ simulations_dict: dict[str, Simulation] = {}
 threads_dict: dict[str, Thread] = {}
 
 
-@app.route("/")
-def index():
-    return render_template("index.html")
-
-
 @socketio.on('disconnect')
 def handle_disconnect():
     user_id = request.sid
@@ -34,6 +29,28 @@ def handle_disconnect():
     if user_id in threads_dict.keys():
         threads_dict[user_id].join()
         del threads_dict[user_id]
+
+
+@socketio.on('button_press')
+def handle_button_press(data):
+    user_id = request.sid
+    if user_id in simulations_dict.keys():
+        match data['direction']:
+            case 'right':
+                simulations_dict[user_id].controllable_acceleration.right = data['is_pressed']
+            case 'left':
+                simulations_dict[user_id].controllable_acceleration.left = data['is_pressed']
+            case 'up':
+                simulations_dict[user_id].controllable_acceleration.up = data['is_pressed']
+            case 'down':
+                simulations_dict[user_id].controllable_acceleration.down = data['is_pressed']
+            case _:
+                raise ValueError("Invalid direction")
+
+
+@app.route("/")
+def index():
+    return render_template("index.html")
 
 
 @app.route("/set_simulation", methods=["POST"])
@@ -53,8 +70,7 @@ def set_simulation():
                         position=np.array([obj['position']['x'], obj['position']['y']]),
                         velocity=np.array([obj['velocity']['x'], obj['velocity']['y']]),
                         movement_type=MovementType(int(obj['movement_type']))) for obj in data['space_objects']],
-            time_delta=time_delta, simulation_time=simulation_time,
-            G=G,
+            time_delta=time_delta, simulation_time=simulation_time, G=G,
             collision_type=CollisionType(int(collision_type)), acceleration_rate=acceleration_rate,
             elasticity_coefficient=elasticity_coefficient)
         simulations_dict[data['user_id']] = simulation
@@ -64,21 +80,15 @@ def set_simulation():
         return jsonify({'status': 'error', 'message': str(e)}), 400
 
 
-@socketio.on('button_press')
-def handle_button_press(data):
-    user_id = request.sid
+@app.route("/delete_simulation", methods=["POST"])
+def delete_simulation():
+    user_id = request.json['user_id']
     if user_id in simulations_dict.keys():
-        match data['direction']:
-            case 'right':
-                simulations_dict[user_id].controllable_acceleration.right = data['is_pressed']
-            case 'left':
-                simulations_dict[user_id].controllable_acceleration.left = data['is_pressed']
-            case 'up':
-                simulations_dict[user_id].controllable_acceleration.up = data['is_pressed']
-            case 'down':
-                simulations_dict[user_id].controllable_acceleration.down = data['is_pressed']
-            case _:
-                raise ValueError("Invalid direction")
+        del simulations_dict[user_id]
+    if user_id in threads_dict.keys():
+        threads_dict[user_id].join()
+        del threads_dict[user_id]
+    return jsonify({'status': 'success'}), 200
 
 
 def simulate(user_id: str):
