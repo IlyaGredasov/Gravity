@@ -1,0 +1,12 @@
+.simulation-container {
+  display: flex;
+}
+
+.configurator-panel {
+  width: 25%;
+  background-color: #17022b
+}
+
+.canvas-panel {
+  width: 75%;
+}
