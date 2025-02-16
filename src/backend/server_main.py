@@ -1,12 +1,13 @@
-import os
 import json
+import os
+from dataclasses import dataclass
+from threading import Thread, Event
 
 import numpy as np
 from dotenv import load_dotenv
-from flask import Flask, render_template, jsonify, request
-from flask_socketio import SocketIO
+from flask import Flask, jsonify, request
 from flask_cors import CORS
-from threading import Thread
+from flask_socketio import SocketIO
 
 from space_computation import Simulation, SpaceObject, CollisionType, MovementType
 
@@ -16,45 +17,51 @@ load_dotenv('.env')
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 socketio = SocketIO(app, async_mode="threading", cors_allowed_origins="*")
 
-users_dict: dict[str, str] = {}
-simulations_dict: dict[str, Simulation] = {}
-threads_dict: dict[str, Thread] = {}
+UserID = str
+
+
+@dataclass
+class SimulationExecutionPool:
+    simulation: Simulation
+    thread: Thread
+    stop_event: Event
+
+
+pools_dict: dict[UserID, SimulationExecutionPool] = {}
+
+
+def stop_execution_pool(user_id: UserID):
+    if user_id in pools_dict.keys():
+        pools_dict[user_id].stop_event.set()
+        pools_dict[user_id].thread.join()
+        del pools_dict[user_id]
 
 
 @socketio.on('disconnect')
 def handle_disconnect():
-    user_id = request.sid
-    if user_id in simulations_dict.keys():
-        del simulations_dict[user_id]
-    if user_id in threads_dict.keys():
-        threads_dict[user_id].join()
-        del threads_dict[user_id]
+    stop_execution_pool(request.sid)
 
 
 @socketio.on('button_press')
 def handle_button_press(data):
     user_id = request.sid
-    if user_id in simulations_dict.keys():
+    if user_id in pools_dict.keys():
+        simulation = pools_dict[user_id].simulation
         match data['direction']:
             case 'right':
-                simulations_dict[user_id].controllable_acceleration.right = data['is_pressed']
+                simulation.controllable_acceleration.right = data['is_pressed']
             case 'left':
-                simulations_dict[user_id].controllable_acceleration.left = data['is_pressed']
+                simulation.controllable_acceleration.left = data['is_pressed']
             case 'up':
-                simulations_dict[user_id].controllable_acceleration.up = data['is_pressed']
+                simulation.controllable_acceleration.up = data['is_pressed']
             case 'down':
-                simulations_dict[user_id].controllable_acceleration.down = data['is_pressed']
+                simulation.controllable_acceleration.down = data['is_pressed']
             case _:
                 raise ValueError("Invalid direction")
 
 
-@app.route("/")
-def index():
-    return render_template("index.html")
-
-
-@app.route("/set_simulation", methods=["POST"])
-def set_simulation():
+@app.route('/launch_simulation', methods=['POST'])
+def launch_simulation():
     data = request.json
     try:
         if len(list(filter(lambda x: x['movement_type'] == MovementType.CONTROLLABLE, data['space_objects']))) > 1:
@@ -73,39 +80,30 @@ def set_simulation():
             time_delta=time_delta, simulation_time=simulation_time, G=G,
             collision_type=CollisionType(int(collision_type)), acceleration_rate=acceleration_rate,
             elasticity_coefficient=elasticity_coefficient)
-        simulations_dict[data['user_id']] = simulation
+        pools_dict[data['user_id']].simulation = simulation
+        pools_dict[data['user_id']].thread = Thread(target=simulate, args=(request.json['user_id'],))
+        pools_dict[data['user_id']].stop_event = Event()
+        pools_dict[data['user_id']].thread.start()
+        print(pools_dict[data['user_id']])
         return jsonify({'status': 'success'}), 200
-
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 400
 
 
 @app.route("/delete_simulation", methods=["POST"])
 def delete_simulation():
-    user_id = request.json['user_id']
-    if user_id in simulations_dict.keys():
-        del simulations_dict[user_id]
-    if user_id in threads_dict.keys():
-        threads_dict[user_id].join()
-        del threads_dict[user_id]
+    stop_execution_pool(request.json['user_id'])
     return jsonify({'status': 'success'}), 200
 
 
-def simulate(user_id: str):
-    simulation = simulations_dict[user_id]
+def simulate(user_id: UserID):
+    simulation = pools_dict[user_id].simulation
     for _ in range(int(simulation.simulation_time // simulation.time_delta)):
         simulation.calculate_step()
         response: json = json.dumps(
             [{i: {"x": obj.position[0], "y": obj.position[1]}} for i, obj in enumerate(simulation.space_objects)])
         socketio.emit('update_step', response, room=user_id)
         socketio.sleep(0.016)
-
-
-@app.route('/launch_simulation', methods=['POST'])
-def launch_simulation():
-    user_thread = Thread(target=simulate, args=(request.json['user_id'],))
-    user_thread.start()
-    return jsonify({'status': 'started'})
 
 
 if __name__ == "__main__":
