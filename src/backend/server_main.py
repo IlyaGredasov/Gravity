@@ -1,5 +1,6 @@
 import json
 import os
+import traceback
 from dataclasses import dataclass
 from threading import Thread, Event
 
@@ -32,6 +33,7 @@ pools_dict: dict[UserID, SimulationExecutionPool] = {}
 
 def stop_execution_pool(user_id: UserID):
     if user_id in pools_dict.keys():
+        print(1)
         pools_dict[user_id].stop_event.set()
         pools_dict[user_id].thread.join()
         del pools_dict[user_id]
@@ -63,6 +65,8 @@ def handle_button_press(data):
 @app.route('/launch_simulation', methods=['POST'])
 def launch_simulation():
     data = request.json
+    if data['user_id'] in pools_dict:
+        stop_execution_pool(data['user_id'])
     try:
         if len(list(filter(lambda x: x['movement_type'] == MovementType.CONTROLLABLE, data['space_objects']))) > 1:
             raise ValueError("Multiple controllable objects are not supported")
@@ -80,13 +84,15 @@ def launch_simulation():
             time_delta=time_delta, simulation_time=simulation_time, G=G,
             collision_type=CollisionType(int(collision_type)), acceleration_rate=acceleration_rate,
             elasticity_coefficient=elasticity_coefficient)
-        pools_dict[data['user_id']].simulation = simulation
-        pools_dict[data['user_id']].thread = Thread(target=simulate, args=(request.json['user_id'],))
-        pools_dict[data['user_id']].stop_event = Event()
+        pools_dict[data['user_id']] = SimulationExecutionPool(
+            simulation=simulation,
+            thread=Thread(target=simulate, args=(request.json['user_id'],)),
+            stop_event=Event()
+        )
         pools_dict[data['user_id']].thread.start()
-        print(pools_dict[data['user_id']])
         return jsonify({'status': 'success'}), 200
     except Exception as e:
+        print(traceback.format_exc())
         return jsonify({'status': 'error', 'message': str(e)}), 400
 
 
@@ -98,12 +104,15 @@ def delete_simulation():
 
 def simulate(user_id: UserID):
     simulation = pools_dict[user_id].simulation
-    for _ in range(int(simulation.simulation_time // simulation.time_delta)):
+    i = 0
+    while not pools_dict[user_id].stop_event.is_set() and i < int(simulation.simulation_time // simulation.time_delta):
         simulation.calculate_step()
         response: json = json.dumps(
-            [{i: {"x": obj.position[0], "y": obj.position[1]}} for i, obj in enumerate(simulation.space_objects)])
+            [{i: {"x": obj.position[0], "y": obj.position[1], "radius": obj.radius}} for i, obj in
+             enumerate(simulation.space_objects)])
         socketio.emit('update_step', response, room=user_id)
         socketio.sleep(0.016)
+        i += 1
 
 
 if __name__ == "__main__":

@@ -95,7 +95,8 @@ class Simulation:
             normal_vector = (self.space_objects[j].position - self.space_objects[i].position) / np.linalg.norm(
                 self.space_objects[j].position - self.space_objects[i].position)
             tangent_vector = np.array([-normal_vector[1], normal_vector[0]])
-
+            print(0, self.space_objects[0].velocity)
+            print(1, self.space_objects[1].velocity)
             normal_velocity_vector_i = np.dot(self.space_objects[i].velocity, normal_vector)
             tangent_velocity_vector_i = np.dot(self.space_objects[i].velocity, tangent_vector)
             normal_velocity_vector_j = np.dot(self.space_objects[j].velocity, normal_vector)
@@ -124,6 +125,8 @@ class Simulation:
                 i].velocity = new_normal_velocity_vector_i * normal_vector + tangent_velocity_vector_i * tangent_vector
             self.space_objects[
                 j].velocity = new_normal_velocity_vector_j * normal_vector + tangent_velocity_vector_j * tangent_vector
+            print(0, self.space_objects[0].velocity)
+            print(1, self.space_objects[1].velocity)
 
     def calculate_acceleration(self, i: int) -> np.array:
         if self.space_objects[i].movement_type == MovementType.STATIC:

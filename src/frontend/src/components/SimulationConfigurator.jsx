@@ -42,12 +42,13 @@ const SimulationConfigurator = ({ onSubmit, socketId }) => {
     }));
   };
 
-  const handleSetSimulation = async (e) => {
+  const handleLaunchSimulation = async (e) => {
     e.preventDefault();
     simulationParams.elasticity_coefficient /= 100;
     simulationParams.user_id = socketId;
+    console.log(simulationParams);
     try {
-      const response = await fetch('http://localhost:5000/set_simulation', {
+      const response = await fetch('http://localhost:5000/launch_simulation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(simulationParams)
@@ -58,23 +59,8 @@ const SimulationConfigurator = ({ onSubmit, socketId }) => {
     } catch (error) { console.error(error) }
   };
 
-  const handleLaunchSimulation = async (e) => {
-    e.preventDefault();
-    const data = { user_id: socketId }
-    try {
-      const response = await fetch('http://localhost:5000/launch_simulation', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-      if (!response.ok) { throw new Error("Not ok") }
-      const result = await response.json();
-      console.log("Success", result);
-    } catch (error) { console.error(error) }
-  };
-
   return (
-    <form onSubmit={handleSetSimulation} className="simulator-config">
+    <form onSubmit={handleLaunchSimulation} className="simulator-config">
       <h2 className="config-title">Simulation Configurator</h2>
       <div className="form-section">
         <label>
@@ -92,8 +78,8 @@ const SimulationConfigurator = ({ onSubmit, socketId }) => {
         <label>
           Collision Type:
           <select name="collision_type" value={simulationParams.collision_type} onChange={handleChange}>
-            <option value={0}>Elastic</option>
-            <option value={1}>Inelastic</option>
+            <option value={0}>Traversing</option>
+            <option value={1}>Elastic</option>
           </select>
         </label>
         <label>
