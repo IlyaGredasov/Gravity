@@ -2,8 +2,8 @@ import React from 'react';
 import { Graphics } from '@pixi/react';
 
 function SpaceObject({ pos, canvasSize }) {
-  const x = canvasSize.width / 2 * 0.7 + pos.x * 100;
-  const y = canvasSize.height / 2 - pos.y * 100;
+  const x = canvasSize.width / 2 * 0.7 + pos.x;
+  const y = canvasSize.height / 2 - pos.y;
   console.log(x, y)
   return (
     <Graphics

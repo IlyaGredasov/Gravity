@@ -18,8 +18,6 @@ load_dotenv('.env')
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 socketio = SocketIO(app, async_mode="threading", cors_allowed_origins="*")
 
-UserID = str
-
 
 @dataclass
 class SimulationExecutionPool:
@@ -28,12 +26,12 @@ class SimulationExecutionPool:
     stop_event: Event
 
 
+UserID = str
 pools_dict: dict[UserID, SimulationExecutionPool] = {}
 
 
 def stop_execution_pool(user_id: UserID):
     if user_id in pools_dict.keys():
-        print(1)
         pools_dict[user_id].stop_event.set()
         pools_dict[user_id].thread.join()
         del pools_dict[user_id]
@@ -68,9 +66,7 @@ def launch_simulation():
     if data['user_id'] in pools_dict:
         stop_execution_pool(data['user_id'])
     try:
-        if len(list(filter(lambda x: x['movement_type'] == MovementType.CONTROLLABLE, data['space_objects']))) > 1:
-            raise ValueError("Multiple controllable objects are not supported")
-        time_delta = data.get('time_delta', Simulation.__init__.__defaults__[0])
+        FPS = data.get('FPS', Simulation.__init__.__defaults__[0])
         simulation_time = data.get('simulation_time', Simulation.__init__.__defaults__[1])
         G = data.get('G', Simulation.__init__.__defaults__[2])
         collision_type = data.get('collision_type', Simulation.__init__.__defaults__[3])
@@ -81,7 +77,7 @@ def launch_simulation():
                         position=np.array([obj['position']['x'], obj['position']['y']]),
                         velocity=np.array([obj['velocity']['x'], obj['velocity']['y']]),
                         movement_type=MovementType(int(obj['movement_type']))) for obj in data['space_objects']],
-            time_delta=time_delta, simulation_time=simulation_time, G=G,
+            FPS=FPS, simulation_time=simulation_time, G=G,
             collision_type=CollisionType(int(collision_type)), acceleration_rate=acceleration_rate,
             elasticity_coefficient=elasticity_coefficient)
         pools_dict[data['user_id']] = SimulationExecutionPool(
@@ -111,7 +107,7 @@ def simulate(user_id: UserID):
             [{i: {"x": obj.position[0], "y": obj.position[1], "radius": obj.radius}} for i, obj in
              enumerate(simulation.space_objects)])
         socketio.emit('update_step', response, room=user_id)
-        socketio.sleep(0.016)
+        socketio.sleep(simulation.time_delta)
         i += 1
 
 
