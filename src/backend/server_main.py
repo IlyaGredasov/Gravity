@@ -64,8 +64,6 @@ def handle_button_press(data):
 def launch_simulation():
     data = request.json
     try:
-        if len(list(filter(lambda x: x['movement_type'] == MovementType.CONTROLLABLE, data['space_objects']))) > 1:
-            raise ValueError("Multiple controllable objects are not supported")
         time_delta = data.get('time_delta', Simulation.__init__.__defaults__[0])
         simulation_time = data.get('simulation_time', Simulation.__init__.__defaults__[1])
         G = data.get('G', Simulation.__init__.__defaults__[2])
@@ -101,7 +99,7 @@ def simulate(user_id: UserID):
     for _ in range(int(simulation.simulation_time // simulation.time_delta)):
         simulation.calculate_step()
         response: json = json.dumps(
-            [{i: {"x": obj.position[0], "y": obj.position[1]}} for i, obj in enumerate(simulation.space_objects)])
+            [{i: {"x": obj.position[0], "y": obj.position[1], "radius": obj.radius}} for i, obj in enumerate(simulation.space_objects)])
         socketio.emit('update_step', response, room=user_id)
         socketio.sleep(0.016)
 
