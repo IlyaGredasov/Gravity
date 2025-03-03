@@ -129,7 +129,7 @@ class Simulation:
                 i].velocity = new_normal_velocity_vector_i * normal_vector + tangent_velocity_vector_i * tangent_vector
             self.space_objects[
                 j].velocity = new_normal_velocity_vector_j * normal_vector + tangent_velocity_vector_j * tangent_vector
-
+            
     def calculate_acceleration(self, i: int) -> np.array:
         if self.space_objects[i].movement_type == MovementType.STATIC:
             return np.zeros(2)
