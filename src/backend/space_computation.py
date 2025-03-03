@@ -65,6 +65,8 @@ class Simulation:
                  G: float = 10, collision_type: CollisionType = CollisionType.ELASTIC,
                  acceleration_rate: float = 1, elasticity_coefficient: float = 0.5):
         self.space_objects: list[SpaceObject] = space_objects
+        if len(list(filter(lambda x: x.movement_type == MovementType.CONTROLLABLE, space_objects))) > 1:
+            raise ValueError("Multiple controllable objects are not supported")
         if time_delta <= 0:
             raise ValueError("Time delta must be positive")
         self.time_delta: float = time_delta

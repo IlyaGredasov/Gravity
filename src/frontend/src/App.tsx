@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState, useRef } from "react";
 import { Stage, Container } from "@pixi/react";
+// @ts-ignore
 import { calculateCanvasSize } from "./common.ts";
 import SpaceObjects from "./components/SpaceObjects.jsx";
 import { socket } from "./socket.js";

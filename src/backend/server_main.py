@@ -33,7 +33,6 @@ pools_dict: dict[UserID, SimulationExecutionPool] = {}
 
 def stop_execution_pool(user_id: UserID):
     if user_id in pools_dict.keys():
-        print(1)
         pools_dict[user_id].stop_event.set()
         pools_dict[user_id].thread.join()
         del pools_dict[user_id]
@@ -68,8 +67,6 @@ def launch_simulation():
     if data['user_id'] in pools_dict:
         stop_execution_pool(data['user_id'])
     try:
-        if len(list(filter(lambda x: x['movement_type'] == MovementType.CONTROLLABLE, data['space_objects']))) > 1:
-            raise ValueError("Multiple controllable objects are not supported")
         time_delta = data.get('time_delta', Simulation.__init__.__defaults__[0])
         simulation_time = data.get('simulation_time', Simulation.__init__.__defaults__[1])
         G = data.get('G', Simulation.__init__.__defaults__[2])
