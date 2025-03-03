@@ -18,8 +18,6 @@ load_dotenv('.env')
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 socketio = SocketIO(app, async_mode="threading", cors_allowed_origins="*")
 
-UserID = str
-
 
 @dataclass
 class SimulationExecutionPool:
@@ -28,6 +26,7 @@ class SimulationExecutionPool:
     stop_event: Event
 
 
+UserID = str
 pools_dict: dict[UserID, SimulationExecutionPool] = {}
 
 
@@ -102,13 +101,12 @@ def delete_simulation():
 def simulate(user_id: UserID):
     simulation = pools_dict[user_id].simulation
     i = 0
-    while not pools_dict[user_id].stop_event.is_set() and i < int(simulation.simulation_time // simulation.time_delta):
+    while not pools_dict[user_id].stop_event.is_set() and i < simulation.simulation_time // simulation.time_delta:
         simulation.calculate_step()
         response: json = json.dumps(
-            [{i: {"x": obj.position[0], "y": obj.position[1], "radius": obj.radius}} for i, obj in
-             enumerate(simulation.space_objects)])
+            [{i: {"x": obj.position[0], "y": obj.position[1], "radius": obj.radius}} for i, obj in enumerate(simulation.space_objects)])
         socketio.emit('update_step', response, room=user_id)
-        socketio.sleep(0.016)
+        socketio.sleep(simulation.time_delta)
         i += 1
 
 
