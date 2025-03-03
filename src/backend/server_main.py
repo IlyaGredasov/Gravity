@@ -66,7 +66,7 @@ def launch_simulation():
     if data['user_id'] in pools_dict:
         stop_execution_pool(data['user_id'])
     try:
-        FPS = data.get('FPS', Simulation.__init__.__defaults__[0])
+        time_delta = data.get('time_delta', Simulation.__init__.__defaults__[0])
         simulation_time = data.get('simulation_time', Simulation.__init__.__defaults__[1])
         G = data.get('G', Simulation.__init__.__defaults__[2])
         collision_type = data.get('collision_type', Simulation.__init__.__defaults__[3])
@@ -104,8 +104,7 @@ def simulate(user_id: UserID):
     while not pools_dict[user_id].stop_event.is_set() and i < simulation.simulation_time // simulation.time_delta:
         simulation.calculate_step()
         response: json = json.dumps(
-            [{i: {"x": obj.position[0], "y": obj.position[1], "radius": obj.radius}} for i, obj in
-             enumerate(simulation.space_objects)])
+            [{i: {"x": obj.position[0], "y": obj.position[1], "radius": obj.radius}} for i, obj in enumerate(simulation.space_objects)])
         socketio.emit('update_step', response, room=user_id)
         socketio.sleep(simulation.time_delta)
         i += 1
