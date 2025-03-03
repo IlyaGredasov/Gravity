@@ -1,5 +1,5 @@
 export const calculateCanvasSize = () => {
   const width = window.innerWidth;
-  const height = window.innerHeight;
+  const height = document.documentElement.clientHeight;
   return { width, height };
 }

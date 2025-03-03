@@ -13,10 +13,11 @@
 }
 
 .form-section {
-  display: grid;
+  display: flex;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 label {
@@ -32,7 +33,7 @@ input[type="text"],
 select {
   background-color: #17022b;
   color: #e2dfdf;
-  margin-top: 5px;
+  margin: 2px;
   padding: 6px 10px;
   border: 1px solid #ccc;
   border-radius: 8px;
@@ -47,9 +48,13 @@ select:focus {
   border-color: #2d89ef;
 }
 
+select {
+  width: 194px;
+}
+
 input[type="range"] {
   appearance: none;
-  width: 100%;
+  width: 194px;
   background: transparent;
 }
 
@@ -84,17 +89,25 @@ button {
   cursor: pointer;
   transition: background 0.3s;
   margin-top: 10px;
-  width: 100%;
+  width: 30%;
 }
 
 button:hover {
   background: #1b61b3;
 }
 
+.space-objects-container {
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.space-objects-container::-webkit-scrollbar {
+  background: #17022b;
+}
+
 .space-object {
   grid-column: span 2;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(10px, 1fr));
   gap: 8px;
   padding: 8px;
   background: #17022b;
@@ -102,6 +115,14 @@ button:hover {
   border-style: solid;
   border-radius: 8px;
   margin-bottom: 12px;
+}
+
+.space-object input {
+  width: 25%;
+}
+
+.space-object select {
+  width: 30%;
 }
 
 h3 {

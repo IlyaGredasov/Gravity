@@ -1,3 +1,4 @@
+from copy import deepcopy
 from dataclasses import dataclass
 from enum import Enum
 from typing import Literal
@@ -52,7 +53,8 @@ class ControllableAcceleration:
     down: Literal[0] | Literal[1] = 0
 
 
-def calculate_new_normal_velocity(first_mass, second_mass, first_velocity, second_velocity, elasticity):
+def calculate_new_normal_velocity(first_mass: float, second_mass: float, first_velocity: np.array,
+                                  second_velocity: np.array, elasticity: float):
     return ((first_mass - elasticity * second_mass) * first_velocity + (
             1 + elasticity) * second_mass * second_velocity) / (first_mass + second_mass)
 
@@ -78,7 +80,7 @@ class Simulation:
         if acceleration_rate <= 0:
             raise ValueError("Acceleration rate must be positive")
         self.acceleration_rate: float = acceleration_rate
-        if 1 < elasticity_coefficient < 0:
+        if not (0 <= elasticity_coefficient <= 1):
             raise ValueError("Elasticity coefficient must be in [0, 1]")
         self.elasticity_coefficient: float = elasticity_coefficient
         if any(obj.movement_type == MovementType.CONTROLLABLE for obj in self.space_objects):
@@ -95,8 +97,6 @@ class Simulation:
             normal_vector = (self.space_objects[j].position - self.space_objects[i].position) / np.linalg.norm(
                 self.space_objects[j].position - self.space_objects[i].position)
             tangent_vector = np.array([-normal_vector[1], normal_vector[0]])
-            print(0, self.space_objects[0].velocity)
-            print(1, self.space_objects[1].velocity)
             normal_velocity_vector_i = np.dot(self.space_objects[i].velocity, normal_vector)
             tangent_velocity_vector_i = np.dot(self.space_objects[i].velocity, tangent_vector)
             normal_velocity_vector_j = np.dot(self.space_objects[j].velocity, normal_vector)
@@ -125,8 +125,6 @@ class Simulation:
                 i].velocity = new_normal_velocity_vector_i * normal_vector + tangent_velocity_vector_i * tangent_vector
             self.space_objects[
                 j].velocity = new_normal_velocity_vector_j * normal_vector + tangent_velocity_vector_j * tangent_vector
-            print(0, self.space_objects[0].velocity)
-            print(1, self.space_objects[1].velocity)
 
     def calculate_acceleration(self, i: int) -> np.array:
         if self.space_objects[i].movement_type == MovementType.STATIC:
@@ -146,8 +144,10 @@ class Simulation:
     def calculate_step(self) -> None:
         if self.collision_type == CollisionType.ELASTIC:
             self.calculate_collisions()
+        new_space_objects = deepcopy(self.space_objects)
         for i in range(len(self.space_objects)):
             if self.space_objects[i].movement_type != MovementType.STATIC:
-                self.space_objects[i].acceleration = self.calculate_acceleration(i)
-                self.space_objects[i].position += self.space_objects[i].velocity * self.time_delta
-                self.space_objects[i].velocity += self.space_objects[i].acceleration * self.time_delta
+                new_space_objects[i].acceleration = self.calculate_acceleration(i)
+                new_space_objects[i].position += self.space_objects[i].velocity * self.time_delta
+                new_space_objects[i].velocity += self.space_objects[i].acceleration * self.time_delta
+        self.space_objects = new_space_objects
