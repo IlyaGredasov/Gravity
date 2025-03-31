@@ -100,14 +100,27 @@ def delete_simulation():
 
 def simulate(user_id: UserID):
     simulation = pools_dict[user_id].simulation
-    i = 0
-    while not pools_dict[user_id].stop_event.is_set() and i < simulation.simulation_time // simulation.time_delta:
-        simulation.calculate_step()
-        response: json = json.dumps(
-            [{i: {"x": obj.position[0], "y": obj.position[1], "radius": obj.radius}} for i, obj in enumerate(simulation.space_objects)])
+    stop_event = pools_dict[user_id].stop_event
+    target_step_time = 1 / 60
+
+    steps_per_emit = max(1, int(target_step_time / simulation.time_delta))
+
+    total_steps = int(simulation.simulation_time / simulation.time_delta)
+    step_count = 0
+
+    while not stop_event.is_set() and step_count < total_steps:
+        for _ in range(steps_per_emit):
+            if stop_event.is_set() or step_count >= total_steps:
+                break
+            simulation.calculate_step()
+            step_count += 1
+        response = json.dumps([
+            {i: {"x": obj.position[0], "y": obj.position[1], "radius": obj.radius}}
+            for i, obj in enumerate(simulation.space_objects)
+        ])
         socketio.emit('update_step', response, room=user_id)
-        socketio.sleep(simulation.time_delta)
-        i += 1
+        socketio.sleep(target_step_time)
+
 
 
 if __name__ == "__main__":
