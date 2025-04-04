@@ -61,12 +61,29 @@ const App = () => {
   });
 
   const handleWheel = useCallback((event) => {
-      const newScale = Math.max(0.1, Math.min(5, scale * (event.deltaY > 0 ? 0.9 : 1.1)));
-      setScale(newScale);
-    },
-    [scale]
-  );
-
+    event.preventDefault();
+  
+    const stage = event.currentTarget;
+    const rect = stage.getBoundingClientRect();
+    
+    const mouseX = event.clientX - rect.left;
+    const mouseY = event.clientY - rect.top;
+    
+    const worldXBefore = (mouseX - canvasSize.width / 2 - position.x * scale) / scale;
+    const worldYBefore = (mouseY - canvasSize.height / 2 - position.y * scale) / scale;
+    
+    const delta = event.deltaY > 0 ? 0.9 : 1.1;
+    const newScale = Math.max(0.1, Math.min(5, scale * delta));
+    
+    const newPosition = {
+      x: (mouseX - canvasSize.width / 2 - worldXBefore * newScale) / newScale,
+      y: (mouseY - canvasSize.height / 2 - worldYBefore * newScale) / newScale,
+    };
+    
+    setScale(newScale);
+    setPosition(newPosition);
+  }, [scale, position, canvasSize]);
+  
   const handleDragStart = useCallback((event) => {
     setDragging(true);
     dragStart.current = { x: event.clientX, y: event.clientY };
@@ -75,12 +92,15 @@ const App = () => {
 
   const handleDragMove = useCallback((event) => {
     if (dragging) {
-      setPosition(() => ({
-        x: dragOffset.current.x + (event.clientX - dragStart.current.x),
-        y: dragOffset.current.y + (event.clientY - dragStart.current.y),
-      }));
+      const deltaX = (event.clientX - dragStart.current.x) / scale;
+      const deltaY = (event.clientY - dragStart.current.y) / scale;
+      
+      setPosition({
+        x: dragOffset.current.x + deltaX,
+        y: dragOffset.current.y + deltaY,
+      });
     }
-  }, [dragging]);
+  }, [dragging, scale]);
 
   const handleDragEnd = useCallback(() => {
     setDragging(false);
@@ -99,8 +119,8 @@ const App = () => {
       </div>
       <div className="canvas-panel">
         <Stage width={canvasSize.width} height={canvasSize.height} options={{ backgroundColor: 0x000000 }} onWheel={handleWheel}>
-          <Container scale={scale} x={position.x} y={position.y} interactive>
-            <SpaceObjects positions={positions} canvasSize={canvasSize} scale={scale} />
+          <Container scale={scale} x={canvasSize.width/2 + position.x*scale} y={canvasSize.height / 2 + position.y*scale}>
+            <SpaceObjects positions={positions} />
           </Container>
         </Stage>
       </div>
