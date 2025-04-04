@@ -1,11 +1,11 @@
 import SpaceObject from './SpaceObject';
 
 
-function SpaceObjects({ positions, canvasSize, scale}) {
+function SpaceObjects({ positions}) {
 
   return (
       positions.map((pos, index) => (
-        <SpaceObject key={index} pos={pos} canvasSize={canvasSize} scale={scale}/>
+        <SpaceObject key={index} pos={pos}/>
       ))
   );
 }

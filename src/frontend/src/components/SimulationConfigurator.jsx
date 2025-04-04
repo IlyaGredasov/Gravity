@@ -6,7 +6,7 @@ const SimulationConfigurator = ({ socketId }) => {
     user_id: socketId,
     space_objects: [
       { name: "first", mass: 1, radius: 50, position: { x: 0, y: 0 }, velocity: { x: 0, y: 0 }, movement_type: 2 },
-      { name: "first", mass: 10, radius: 50, position: { x: 100, y: 100 }, velocity: { x: 0, y: 0 }, movement_type: 2 }
+      { name: "first", mass: 10, radius: 50, position: { x: 100, y: 100 }, velocity: { x: 0, y: 0 }, movement_type: 1 }
     ],
     time_delta: 0.5,
     simulation_time: 100000000,
