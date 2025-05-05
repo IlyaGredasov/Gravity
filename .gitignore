@@ -208,3 +208,4 @@ cython_debug/
 *.pyc
 /run.bat
 /src/frontend/node_modules/*
+.idea/
