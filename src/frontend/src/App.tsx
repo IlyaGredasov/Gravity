@@ -2,44 +2,47 @@ import React, { useCallback, useEffect, useState, useRef } from "react";
 import { Stage, Container } from "@pixi/react";
 import { calculateCanvasSize } from "./common.ts";
 import SpaceObjects from "./components/SpaceObjects.jsx";
-import { socket } from "./socket.js";
 import SimulationConfigurator from "./components/SimulationConfigurator.jsx";
+import CoordinatesDisplay from "./components/CoordinatesDisplay.jsx";
+import { socket } from "./socket.js";
 import "./App.css";
 
-const CoordinatesDisplay = ({ position, positions }) => {
-  return (
-    <div className="coordinates-display">
-      <p>Center: ({-position.x.toFixed(2)}, {-position.y.toFixed(2)})</p>
-      {positions.map((pos, index) => (
-        <p key={index}>Object {index + 1}: ({pos.x.toFixed(2)}, {pos.y.toFixed(2)})</p>
-      ))}
-    </div>
-  );
-};
+const keyMap = new Map([
+  ["w", "down"],
+  ["s", "up"],
+  ["a", "left"],
+  ["d", "right"],
+]);
 
 const App = () => {
-  const keyMap = new Map([
-    ["w", "down"],
-    ["s", "up"],
-    ["a", "left"],
-    ["d", "right"],
-  ]);
   const [canvasSize, setCanvasSize] = useState(calculateCanvasSize);
   const [positions, setPositions] = useState([]);
   const [socketId, setSocketId] = useState();
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [dragging, setDragging] = useState(false);
-  const dragStart = useRef({ x: 0, y: 0 });
-  const dragOffset = useRef({ x: 0, y: 0 });
+  
+  const dragState = useRef({
+    start: { x: 0, y: 0 },
+    offset: { x: 0, y: 0 },
+    active: false
+  });
 
   const updateCanvasSize = useCallback(() => {
-    setCanvasSize(calculateCanvasSize());
+    const newSize = calculateCanvasSize();
+    setCanvasSize(prev => 
+      prev.width !== newSize.width || prev.height !== newSize.height 
+        ? newSize 
+        : prev
+    );
   }, []);
 
   useEffect(() => {
-    window.addEventListener("resize", updateCanvasSize);
-    return () => window.removeEventListener("resize", updateCanvasSize);
+    const handleResize = () => {
+      requestAnimationFrame(updateCanvasSize);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, [updateCanvasSize]);
 
   useEffect(() => {
@@ -53,22 +56,38 @@ const App = () => {
       }
     };
 
+    const handleSocketUpdate = (data) => {
+      try {
+        const parsed = JSON.parse(data);
+        setPositions(prev => {
+          const newPositions = parsed.map(obj => Object.values(obj)[0]);
+          if (prev.length !== newPositions.length || 
+              prev.some((p, i) => p.x !== newPositions[i].x || p.y !== newPositions[i].y)) {
+            return newPositions;
+          }
+          return prev;
+        });
+      } catch (e) {
+        console.error("Error parsing socket data:", e);
+      }
+    };
+
+    const handleConnect = () => {
+      setSocketId(socket.id);
+    };
+
     window.addEventListener("keydown", handleKeyEvent);
     window.addEventListener("keyup", handleKeyEvent);
-
-    socket.on("update_step", (data) => {
-      setPositions(JSON.parse(data).map((obj) => Object.values(obj)[0]));
-    });
-
-    socket.on("connect", () => {
-      setSocketId(socket.id);
-    });
+    socket.on("update_step", handleSocketUpdate);
+    socket.on("connect", handleConnect);
 
     return () => {
       window.removeEventListener("keydown", handleKeyEvent);
       window.removeEventListener("keyup", handleKeyEvent);
+      socket.off("update_step", handleSocketUpdate);
+      socket.off("connect", handleConnect);
     };
-  });
+  }, []);
 
   const handleWheel = useCallback((event) => {
   
@@ -94,26 +113,28 @@ const App = () => {
   }, [scale, position, canvasSize]);
   
   const handleDragStart = useCallback((event) => {
-    if (event.target.localName !== "canvas") return
-    setDragging(true);
-    dragStart.current = { x: event.clientX, y: event.clientY };
-    dragOffset.current = { x: position.x, y: position.y };
+    if (event.target.localName !== "canvas") return;
+    dragState.current = {
+      start: { x: event.clientX, y: event.clientY },
+      offset: { x: position.x, y: position.y },
+      active: true
+    };
   }, [position]);
 
   const handleDragMove = useCallback((event) => {
-    if (dragging) {
-      const deltaX = (event.clientX - dragStart.current.x) / scale;
-      const deltaY = (event.clientY - dragStart.current.y) / scale;
-      
-      setPosition({
-        x: dragOffset.current.x + deltaX,
-        y: dragOffset.current.y + deltaY,
-      });
-    }
-  }, [dragging, scale]);
+    if (!dragState.current.active) return;
+    
+    const deltaX = (event.clientX - dragState.current.start.x) / scale;
+    const deltaY = (event.clientY - dragState.current.start.y) / scale;
+    
+    setPosition({
+      x: dragState.current.offset.x + deltaX,
+      y: dragState.current.offset.y + deltaY,
+    });
+  }, [scale]);
 
   const handleDragEnd = useCallback(() => {
-    setDragging(false);
+    dragState.current.active = false;
   }, []);
 
   return (
@@ -128,8 +149,11 @@ const App = () => {
         <SimulationConfigurator socketId={socketId} setPosition={setPosition} />
       </div>
       <div className="canvas-panel">
-        <Stage width={canvasSize.width} height={canvasSize.height} options={{ backgroundColor: 0x000000 }} onWheel={handleWheel}>
-          <Container scale={scale} x={canvasSize.width/2 + position.x*scale} y={canvasSize.height / 2 + position.y*scale}>
+        <Stage width={canvasSize.width} height={canvasSize.height} 
+          options={{ backgroundColor: 0x000000, autoDensity: true, antialias: false }} onWheel={handleWheel}>
+          <Container scale={scale} 
+            x={canvasSize.width/2 + position.x*scale} 
+            y={canvasSize.height / 2 + position.y*scale}>
             <SpaceObjects positions={positions} />
           </Container>
         </Stage>
@@ -139,4 +163,4 @@ const App = () => {
   );
 };
 
-export default App;
+export default React.memo(App);
