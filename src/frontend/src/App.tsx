@@ -1,11 +1,21 @@
 import React, { useCallback, useEffect, useState, useRef } from "react";
 import { Stage, Container } from "@pixi/react";
-// @ts-ignore
 import { calculateCanvasSize } from "./common.ts";
 import SpaceObjects from "./components/SpaceObjects.jsx";
 import { socket } from "./socket.js";
 import SimulationConfigurator from "./components/SimulationConfigurator.jsx";
 import "./App.css";
+
+const CoordinatesDisplay = ({ position, positions }) => {
+  return (
+    <div className="coordinates-display">
+      <p>Center: ({-position.x.toFixed(2)}, {-position.y.toFixed(2)})</p>
+      {positions.map((pos, index) => (
+        <p key={index}>Object {index + 1}: ({pos.x.toFixed(2)}, {pos.y.toFixed(2)})</p>
+      ))}
+    </div>
+  );
+};
 
 const App = () => {
   const keyMap = new Map([
@@ -61,7 +71,6 @@ const App = () => {
   });
 
   const handleWheel = useCallback((event) => {
-    event.preventDefault();
   
     const stage = event.currentTarget;
     const rect = stage.getBoundingClientRect();
@@ -85,6 +94,7 @@ const App = () => {
   }, [scale, position, canvasSize]);
   
   const handleDragStart = useCallback((event) => {
+    if (event.target.localName !== "canvas") return
     setDragging(true);
     dragStart.current = { x: event.clientX, y: event.clientY };
     dragOffset.current = { x: position.x, y: position.y };
@@ -115,7 +125,7 @@ const App = () => {
       onMouseLeave={handleDragEnd}
     >
       <div className="configurator-panel">
-        <SimulationConfigurator socketId={socketId} />
+        <SimulationConfigurator socketId={socketId} setPosition={setPosition} />
       </div>
       <div className="canvas-panel">
         <Stage width={canvasSize.width} height={canvasSize.height} options={{ backgroundColor: 0x000000 }} onWheel={handleWheel}>
@@ -124,6 +134,7 @@ const App = () => {
           </Container>
         </Stage>
       </div>
+      <CoordinatesDisplay position={position} positions={positions} />
     </div>
   );
 };
