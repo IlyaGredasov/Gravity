@@ -101,7 +101,7 @@ const App = () => {
     const worldYBefore = (mouseY - canvasSize.height / 2 - position.y * scale) / scale;
     
     const delta = event.deltaY > 0 ? 0.9 : 1.1;
-    const newScale = Math.max(0.1, Math.min(5, scale * delta));
+    const newScale = Math.max(0.000001, Math.min(5, scale * delta));
     
     const newPosition = {
       x: (mouseX - canvasSize.width / 2 - worldXBefore * newScale) / newScale,
