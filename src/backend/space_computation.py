@@ -53,8 +53,8 @@ class ControllableAcceleration:
     down: Literal[0] | Literal[1] = 0
 
 
-def calculate_new_normal_velocity(first_mass: float, second_mass: float, first_velocity: np.array,
-                                  second_velocity: np.array, elasticity: float):
+def calculate_new_normal_velocity(first_mass: float, second_mass: float, first_velocity: float,
+                                  second_velocity: float, elasticity: float) -> float:
     return ((first_mass - elasticity * second_mass) * first_velocity + (
             1 + elasticity) * second_mass * second_velocity) / (first_mass + second_mass)
 
