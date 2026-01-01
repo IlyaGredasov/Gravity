@@ -1,0 +1,9 @@
+[submodule "python_backend"]
+	path = python_backend
+	url = https://github.com/IlyaGredasov/GravityPythonBackend
+[submodule "rust_backend"]
+	path = rust_backend
+	url = https://github.com/IlyaGredasov/GravityRustBackend
+[submodule "frontend"]
+	path = frontend
+	url = https://github.com/daytonq/GravityFrontend
