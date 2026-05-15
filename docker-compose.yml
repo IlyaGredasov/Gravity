@@ -1,0 +1,29 @@
+services:
+  frontend:
+    profiles:
+      - python
+      - rust
+    build:
+      context: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      HOST: 0.0.0.0
+      PORT: 3000
+      WDS_SOCKET_PORT: 3000
+
+  python_backend:
+    profiles:
+      - python
+    build:
+      context: ./python_backend
+    ports:
+      - "5000:5000"
+
+  rust_backend:
+    profiles:
+      - rust
+    build:
+      context: ./rust_backend
+    ports:
+      - "5000:5000"
