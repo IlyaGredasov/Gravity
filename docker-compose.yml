@@ -12,7 +12,7 @@ services:
       PORT: 3000
       WDS_SOCKET_PORT: 3000
 
-  python_backend:
+  python-backend:
     profiles:
       - python
     build:
@@ -20,7 +20,7 @@ services:
     ports:
       - "5000:5000"
 
-  rust_backend:
+  rust-backend:
     profiles:
       - rust
     build:
